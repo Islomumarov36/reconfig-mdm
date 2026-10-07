@@ -14,7 +14,7 @@
 </div>
 <div id="app" class="hidden"><div class="wrap"><div class="top"><div><h1>RECONFIG MDM</h1><div class="muted">Admin panel</div></div><div class="session"><button onclick="loadDevices()">Yangilash</button><button onclick="logout()">Chiqish</button></div></div>
 <div class="cards"><div class="card"><div class="muted">Jami</div><div id="total" class="n">0</div></div><div class="card"><div class="muted">Active</div><div id="active" class="n">0</div></div><div class="card"><div class="muted">Overdue</div><div id="overdue" class="n">0</div></div><div class="card"><div class="muted">Released</div><div id="released" class="n">0</div></div></div>
-<div class="box"><div class="toolbar"><input id="q" placeholder="Device ID yoki model..." oninput="render()"><select id="f" onchange="render()"><option value="">Barcha status</option><option>ACTIVE</option><option>OVERDUE</option><option>RELEASED</option></select></div><div id="msg" class="err"></div><div class="table"><table><thead><tr><th>Device ID</th><th>Qurilma</th><th>Android</th><th>Owner</th><th>Status</th><th>Oxirgi aloqa</th><th>Boshqaruv</th></tr></thead><tbody id="rows"></tbody></table></div></div></div>
+<div class="box"><div class="toolbar"><input id="q" placeholder="IMEI, Device ID yoki model..." oninput="render()"><select id="f" onchange="render()"><option value="">Barcha status</option><option>ACTIVE</option><option>OVERDUE</option><option>RELEASED</option></select></div><div id="msg" class="err"></div><div class="table"><table><thead><tr><th>Device ID</th><th>IMEI</th><th>Enrollment ID</th><th>Qurilma</th><th>Android</th><th>Owner</th><th>Status</th><th>Oxirgi aloqa</th><th>Boshqaruv</th></tr></thead><tbody id="rows"></tbody></table></div></div></div>
 <script>
 const URL='https://kcnnbjyolmpmrtwcydjp.supabase.co';
 const KEY='sb_publishable_fK0L6glj2vZNs07OG6a1eg_3hDZ-9HB';
@@ -59,8 +59,8 @@ async function loadDevices(){
 }
 function render(){
   let q=document.getElementById('q').value.toLowerCase(),f=document.getElementById('f').value;
-  let a=devices.filter(d=>(!f||d.status===f)&&(!q||((d.device_id||'')+' '+(d.model||'')+' '+(d.manufacturer||'')).toLowerCase().includes(q)));
-  document.getElementById('rows').innerHTML=a.map(d=>`<tr><td>${esc(d.device_id)}</td><td>${esc((d.manufacturer||'')+' '+(d.model||''))}</td><td>${esc(d.android_version||'-')}</td><td>${d.device_owner?'YES':'NO'}</td><td><span class="badge ${esc(d.status)}">${esc(d.status)}</span></td><td>${fmt(d.last_seen_at)}</td><td><select onchange="setStatus('${escAttr(d.device_id)}',this.value)"><option ${d.status==='ACTIVE'?'selected':''}>ACTIVE</option><option ${d.status==='OVERDUE'?'selected':''}>OVERDUE</option><option ${d.status==='RELEASED'?'selected':''}>RELEASED</option></select></td></tr>`).join('');
+  let a=devices.filter(d=>(!f||d.status===f)&&(!q||((d.device_id||'')+' '+(d.imei||'')+' '+(d.enrollment_id||'')+' '+(d.device_name||'')+' '+(d.model||'')+' '+(d.manufacturer||'')).toLowerCase().includes(q)));
+  document.getElementById('rows').innerHTML=a.map(d=>`<tr><td>${esc(d.device_id)}</td><td>${esc(d.imei||'-')}</td><td>${esc(d.enrollment_id||'-')}</td><td>${esc(d.device_name||((d.manufacturer||'')+' '+(d.model||'')))}</td><td>${esc(d.android_version||'-')}</td><td>${d.device_owner?'YES':'NO'}</td><td><span class="badge ${esc(d.status)}">${esc(d.status)}</span></td><td>${fmt(d.last_seen_at)}</td><td><select onchange="setStatus('${escAttr(d.device_id)}',this.value)"><option ${d.status==='ACTIVE'?'selected':''}>ACTIVE</option><option ${d.status==='OVERDUE'?'selected':''}>OVERDUE</option><option ${d.status==='RELEASED'?'selected':''}>RELEASED</option></select></td></tr>`).join('');
   document.getElementById('total').textContent=devices.length;
   ['ACTIVE','OVERDUE','RELEASED'].forEach(s=>document.getElementById(s.toLowerCase()).textContent=devices.filter(d=>d.status===s).length)
 }
