@@ -1,16 +1,85 @@
 <!doctype html>
 <html lang="uz"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>RECONFIG MDM Admin</title>
 <style>*{box-sizing:border-box}body{margin:0;background:#06100c;color:#eef7f2;font-family:Arial,sans-serif}.wrap{max-width:1100px;margin:auto;padding:22px}.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h1{margin:0;color:#35e58a}.muted{color:#8ca096}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:22px 0}.card,.box{background:#0d1a15;border:1px solid #1e3b2e;border-radius:14px;padding:16px}.n{font-size:28px;font-weight:700}.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}input,select,button{background:#10231b;color:#fff;border:1px solid #28543e;border-radius:10px;padding:10px 12px}input{flex:1;min-width:180px}button{cursor:pointer;color:#35e58a;font-weight:700}.table{overflow:auto}table{width:100%;border-collapse:collapse;min-width:800px}th,td{text-align:left;padding:12px;border-bottom:1px solid #1d3329}th{color:#9fb3a9}.badge{padding:5px 8px;border-radius:8px;font-weight:700}.ACTIVE{color:#35e58a}.OVERDUE{color:#ffc107}.RELEASED{color:#8aa099}.err{color:#ff9b9b;white-space:pre-wrap}@media(max-width:700px){.cards{grid-template-columns:repeat(2,1fr)}}
-</style></head><body><div class="wrap"><div class="top"><div><h1>RECONFIG MDM</h1><div class="muted">Admin panel</div></div><button onclick="loadDevices()">Yangilash</button></div>
+.login{max-width:420px;margin:10vh auto}.login h2{color:#35e58a}.login input{width:100%;margin:6px 0 12px}.hidden{display:none}.session{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style></head><body>
+<div id="login" class="wrap login">
+  <div class="box">
+    <h2>RECONFIG MDM</h2><div class="muted">Admin login</div><br>
+    <input id="email" type="email" placeholder="Email">
+    <input id="password" type="password" placeholder="Parol">
+    <button onclick="login()">Kirish</button>
+    <div id="loginMsg" class="err" style="margin-top:12px"></div>
+  </div>
+</div>
+<div id="app" class="hidden"><div class="wrap"><div class="top"><div><h1>RECONFIG MDM</h1><div class="muted">Admin panel</div></div><div class="session"><button onclick="loadDevices()">Yangilash</button><button onclick="logout()">Chiqish</button></div></div>
 <div class="cards"><div class="card"><div class="muted">Jami</div><div id="total" class="n">0</div></div><div class="card"><div class="muted">Active</div><div id="active" class="n">0</div></div><div class="card"><div class="muted">Overdue</div><div id="overdue" class="n">0</div></div><div class="card"><div class="muted">Released</div><div id="released" class="n">0</div></div></div>
 <div class="box"><div class="toolbar"><input id="q" placeholder="Device ID yoki model..." oninput="render()"><select id="f" onchange="render()"><option value="">Barcha status</option><option>ACTIVE</option><option>OVERDUE</option><option>RELEASED</option></select></div><div id="msg" class="err"></div><div class="table"><table><thead><tr><th>Device ID</th><th>Qurilma</th><th>Android</th><th>Owner</th><th>Status</th><th>Oxirgi aloqa</th><th>Boshqaruv</th></tr></thead><tbody id="rows"></tbody></table></div></div></div>
 <script>
 const URL='https://kcnnbjyolmpmrtwcydjp.supabase.co';
 const KEY='sb_publishable_fK0L6glj2vZNs07OG6a1eg_3hDZ-9HB';
-let devices=[];
-const headers={'apikey':KEY,'Authorization':'Bearer '+KEY,'Content-Type':'application/json'};
-async function loadDevices(){document.getElementById('msg').textContent='';try{let r=await fetch(URL+'/rest/v1/mdm_devices?select=*&order=last_seen_at.desc',{headers});if(!r.ok)throw new Error('HTTP '+r.status+' '+await r.text());devices=await r.json();render();}catch(e){document.getElementById('msg').textContent='Bazani o‘qib bo‘lmadi: '+e.message+'\nSQL fayldagi admin policy-ni Supabase’da Run qiling.'}}
-function render(){let q=document.getElementById('q').value.toLowerCase(),f=document.getElementById('f').value;let a=devices.filter(d=>(!f||d.status===f)&&(!q||((d.device_id||'')+' '+(d.model||'')+' '+(d.manufacturer||'')).toLowerCase().includes(q)));document.getElementById('rows').innerHTML=a.map(d=>`<tr><td>${esc(d.device_id)}</td><td>${esc((d.manufacturer||'')+' '+(d.model||''))}</td><td>${esc(d.android_version||'-')}</td><td>${d.device_owner?'YES':'NO'}</td><td><span class="badge ${esc(d.status)}">${esc(d.status)}</span></td><td>${fmt(d.last_seen_at)}</td><td><select onchange="setStatus('${escAttr(d.device_id)}',this.value)"><option ${d.status==='ACTIVE'?'selected':''}>ACTIVE</option><option ${d.status==='OVERDUE'?'selected':''}>OVERDUE</option><option ${d.status==='RELEASED'?'selected':''}>RELEASED</option></select></td></tr>`).join('');document.getElementById('total').textContent=devices.length;['ACTIVE','OVERDUE','RELEASED'].forEach(s=>document.getElementById(s.toLowerCase()).textContent=devices.filter(d=>d.status===s).length)}
-async function setStatus(id,status){document.getElementById('msg').textContent='';try{let r=await fetch(URL+'/rest/v1/rpc/mdm_admin_set_status',{method:'POST',headers,body:JSON.stringify({p_device_id:id,p_status:status})});if(!r.ok)throw new Error('HTTP '+r.status+' '+await r.text());await loadDevices()}catch(e){document.getElementById('msg').textContent='Status o‘zgarmadi: '+e.message}}
-function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}function escAttr(s){return String(s??'').replace(/'/g,"\\'")}function fmt(s){if(!s)return '-';try{return new Date(s).toLocaleString()}catch(e){return s}}loadDevices();setInterval(loadDevices,30000);
-</script></body></html>
+let devices=[], accessToken=null;
+
+function authHeaders(){
+  return {'apikey':KEY,'Authorization':'Bearer '+accessToken,'Content-Type':'application/json'};
+}
+async function login(){
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('password').value;
+  const m=document.getElementById('loginMsg'); m.textContent='';
+  try{
+    let r=await fetch(URL+'/auth/v1/token?grant_type=password',{
+      method:'POST',headers:{'apikey':KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({email,password})
+    });
+    let j=await r.json();
+    if(!r.ok) throw new Error(j.error_description||j.msg||'Login xatosi');
+    accessToken=j.access_token;
+    sessionStorage.setItem('reconfig_access_token',accessToken);
+    showApp(); await loadDevices();
+  }catch(e){m.textContent='Kirish amalga oshmadi: '+e.message}
+}
+function logout(){
+  accessToken=null; sessionStorage.removeItem('reconfig_access_token');
+  document.getElementById('app').classList.add('hidden');
+  document.getElementById('login').classList.remove('hidden');
+}
+function showApp(){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+}
+async function loadDevices(){
+  document.getElementById('msg').textContent='';
+  try{
+    let r=await fetch(URL+'/rest/v1/mdm_devices?select=*&order=last_seen_at.desc',{headers:authHeaders()});
+    if(r.status===401){logout();throw new Error('Sessiya tugagan. Qayta kiring.')}
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+await r.text());
+    devices=await r.json();render();
+  }catch(e){document.getElementById('msg').textContent='Bazani o‘qib bo‘lmadi: '+e.message}
+}
+function render(){
+  let q=document.getElementById('q').value.toLowerCase(),f=document.getElementById('f').value;
+  let a=devices.filter(d=>(!f||d.status===f)&&(!q||((d.device_id||'')+' '+(d.model||'')+' '+(d.manufacturer||'')).toLowerCase().includes(q)));
+  document.getElementById('rows').innerHTML=a.map(d=>`<tr><td>${esc(d.device_id)}</td><td>${esc((d.manufacturer||'')+' '+(d.model||''))}</td><td>${esc(d.android_version||'-')}</td><td>${d.device_owner?'YES':'NO'}</td><td><span class="badge ${esc(d.status)}">${esc(d.status)}</span></td><td>${fmt(d.last_seen_at)}</td><td><select onchange="setStatus('${escAttr(d.device_id)}',this.value)"><option ${d.status==='ACTIVE'?'selected':''}>ACTIVE</option><option ${d.status==='OVERDUE'?'selected':''}>OVERDUE</option><option ${d.status==='RELEASED'?'selected':''}>RELEASED</option></select></td></tr>`).join('');
+  document.getElementById('total').textContent=devices.length;
+  ['ACTIVE','OVERDUE','RELEASED'].forEach(s=>document.getElementById(s.toLowerCase()).textContent=devices.filter(d=>d.status===s).length)
+}
+async function setStatus(id,status){
+  document.getElementById('msg').textContent='';
+  try{
+    let r=await fetch(URL+'/rest/v1/rpc/mdm_admin_set_status',{
+      method:'POST',headers:authHeaders(),body:JSON.stringify({p_device_id:id,p_status:status})
+    });
+    if(r.status===401){logout();throw new Error('Sessiya tugagan. Qayta kiring.')}
+    if(!r.ok)throw new Error('HTTP '+r.status+' '+await r.text());
+    await loadDevices();
+  }catch(e){document.getElementById('msg').textContent='Status o‘zgarmadi: '+e.message;await loadDevices()}
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function escAttr(s){return String(s??'').replace(/'/g,"\\'")}
+function fmt(s){if(!s)return '-';try{return new Date(s).toLocaleString()}catch(e){return s}}
+
+accessToken=sessionStorage.getItem('reconfig_access_token');
+if(accessToken){showApp();loadDevices();}
+setInterval(()=>{if(accessToken)loadDevices()},30000);
+</script></div></body></html>
